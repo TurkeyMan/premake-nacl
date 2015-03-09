@@ -111,4 +111,4 @@ configuration { "PNaCl", "ConsoleApp or WindowedApp" }
 --
 
 	require( "vstudio" )
-	nacl.printf( "Loaded NaCl vs_addin support 'vstudio.lua'", v )
+	nacl.printf( "Loaded vs_addin support 'vstudio.lua'", v )

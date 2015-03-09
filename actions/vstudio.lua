@@ -1,7 +1,7 @@
 --
 -- vstudio.lua
 -- NaCl integration for vstudio.
--- Copyright (c) 2012 Manu Evans and the Premake project
+-- Copyright (c) 2012-2015 Manu Evans and the Premake project
 --
 
 	local nacl = premake.extensions.nacl
@@ -19,10 +19,6 @@
 	if vstudio.vs200x_architectures ~= nil then
 		vstudio.vs200x_architectures.x86 = "x86"
 		vstudio.vs200x_architectures.x86_64 = "x64"
-	end
-
-	function nacl.isnacl(cfg)
-		return cfg.system == premake.NACL or cfg.system == premake.PPAPI
 	end
 
 	premake.override(vstudio, "archFromConfig", function(oldfn, cfg, win32)
