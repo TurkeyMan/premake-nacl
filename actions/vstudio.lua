@@ -1,15 +1,16 @@
 --
 -- vstudio.lua
 -- NaCl integration for vstudio.
--- Copyright (c) 2012-2015 Manu Evans and the Premake project
+-- Copyright (c) 2012 Manu Evans and the Premake project
 --
 
-	local nacl = premake.extensions.nacl
-	local sln2005 = premake.vstudio.sln2005
-	local vc2010 = premake.vstudio.vc2010
-	local vstudio = premake.vstudio
-	local project = premake.project
-	local config = premake.config
+	local p = premake
+	local nacl = p.extensions.nacl
+	local sln2005 = p.vstudio.sln2005
+	local vc2010 = p.vstudio.vc2010
+	local vstudio = p.vstudio
+	local project = p.project
+	local config = p.config
 
 
 --
@@ -19,6 +20,10 @@
 	if vstudio.vs200x_architectures ~= nil then
 		vstudio.vs200x_architectures.x86 = "x86"
 		vstudio.vs200x_architectures.x86_64 = "x64"
+	end
+
+	function nacl.isnacl(cfg)
+		return cfg.system == premake.NACL or cfg.system == premake.PPAPI
 	end
 
 	premake.override(vstudio, "archFromConfig", function(oldfn, cfg, win32)
@@ -52,11 +57,19 @@
 -- Extend configurationProperties.
 --
 
-	table.insert(vc2010.elements.configurationProperties, "naclIndexHtml")
-	table.insert(vc2010.elements.configurationProperties, "naclToolchainName")
-	table.insert(vc2010.elements.configurationProperties, "naclSdkRoot")
+	premake.override(vc2010.elements, "configurationProperties", function(oldfn, cfg)
+		local elements = oldfn(cfg)
+		if cfg.kind ~= p.UTILITY then
+			elements = table.join(elements, {
+			  nacl.naclIndexHtml,
+			  nacl.naclToolchainName,
+			  nacl.naclSdkRoot
+			})
+		end
+		return elements
+	end)
 
-	function vc2010.naclIndexHtml(cfg)
+	function nacl.naclIndexHtml(cfg)
 		if cfg.system == premake.NACL or cfg.system == premake.PPAPI then
 			if cfg.indexhtml ~= nil then
 				_p(2,'<NaClIndexHTML>%s</NaClIndexHTML>', cfg.indexhtml)
@@ -64,14 +77,14 @@
 		end
 	end
 
-	function vc2010.naclToolchainName(cfg)
+	function nacl.naclToolchainName(cfg)
 		if cfg.system == premake.NACL and cfg.architecture ~= "llvm" then
 			-- TODO: do something about this?
 --			_p(2,'<ToolchainName>glibc</ToolchainName>')
 		end
 	end
 
-	function vc2010.naclSdkRoot(cfg)
+	function nacl.naclSdkRoot(cfg)
 		if cfg.system == premake.NACL or cfg.system == premake.PPAPI then
 			if cfg.naclsdkroot ~= nil then
 				_p(2,'<VSNaClSDKRoot>%s</VSNaClSDKRoot>', cfg.naclsdkroot)
@@ -84,10 +97,18 @@
 -- Extend outputProperties.
 --
 
-	table.insert(vc2010.elements.outputProperties, "naclWebServerPort")
-	table.insert(vc2010.elements.outputProperties, "naclManifestPath")
+	premake.override(vc2010.elements, "outputProperties", function(oldfn, cfg)
+		local elements = oldfn(cfg)
+		if cfg.kind ~= p.UTILITY then
+			elements = table.join(elements, {
+			  nacl.naclWebServerPort,
+			  nacl.naclManifestPath
+			})
+		end
+		return elements
+	end)
 
-	function vc2010.naclWebServerPort(cfg)
+	function nacl.naclWebServerPort(cfg)
 		if cfg.system == premake.NACL or cfg.system == premake.PPAPI then
 			if cfg.webserverport ~= nil then
 				_p(2,'<NaClWebServerPort>%d</NaClWebServerPort>', cfg.webserverport)
@@ -95,7 +116,7 @@
 		end
 	end
 
-	function vc2010.naclManifestPath(cfg)
+	function nacl.naclManifestPath(cfg)
 		if cfg.system == premake.NACL then
 			if cfg.manifestpath ~= nil then
 				_p(2,'<NaClManifestPath>%s</NaClManifestPath>', cfg.manifestpath)
@@ -119,10 +140,14 @@
 -- Extend clCompile.
 --
 
-	table.insert(vc2010.elements.clCompile, "naclDebugInformation")
---	table.insert(vc2010.elements.clCompile, "positionIndependentCode")
+	premake.override(vc2010.elements, "clCompile", function(oldfn, cfg)
+		return table.join(oldfn(cfg), {
+		  nacl.naclDebugInformation,
+--		  nacl.positionIndependentCode
+		})
+	end)
 
-	function vc2010.naclDebugInformation(cfg)
+	function nacl.naclDebugInformation(cfg)
 		if cfg.system == premake.NACL then
 			if cfg.flags.Symbols then
 				_p(3,'<GenerateDebugInformation>true</GenerateDebugInformation>')
@@ -157,7 +182,7 @@
 			local map = { Off="O0", On="O2", Debug="O0", Full="O3", Size="Os", Speed="O3" }
 			local value = map[cfg.optimize]
 			if value or not condition then
-				vc2010.element(3, 'OptimizationLevel', condition, value or "O0")
+				vc2010.element('OptimizationLevel', condition, value or "O0")
 			end
 		else
 			oldfn(cfg, condition)
@@ -178,6 +203,25 @@
 --
 -- Extend Link.
 --
+
+	premake.override(vc2010.elements, "link", function(oldfn, cfg, explicit)
+		local elements = oldfn(cfg)
+		if cfg.kind ~= p.STATICLIB then
+			elements = table.join(elements, {
+			  nacl.translateNexe
+			})
+		end
+		return elements
+	end)
+
+	function nacl.translateNexe(cfg)
+		-- Note: Only relevant to PNaCl
+		if cfg.system == premake.NACL and cfg.architecture == "llvm" then
+			_x(3, '<TranslateX86>%s</TranslateX86>', iif(cfg.translatenexe.all or cfg.translatenexe.x86, 'true', 'false'))
+			_x(3, '<TranslateX64>%s</TranslateX64>', iif(cfg.translatenexe.all or cfg.translatenexe.x86_64, 'true', 'false'))
+			_x(3, '<TranslateArm>%s</TranslateArm>', iif(cfg.translatenexe.all or cfg.translatenexe.arm, 'true', 'false'))
+		end
+	end
 
 	premake.override(vc2010, "generateDebugInformation", function(oldfn, cfg)
 		-- Note: NaCl specifies the debug info in the clCompile section
