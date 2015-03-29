@@ -2,148 +2,64 @@
 --
 -- Create a nacl namespace to isolate the additions
 --
-	premake.extensions.nacl = {}
+	premake.modules.nacl = {}
 
-	local nacl = premake.extensions.nacl
-	local vstudio = premake.vstudio
-	local project = premake.project
-	local api = premake.api
-
-	nacl.support_url = "https://bitbucket.org/premakeext/nacl/wiki/Home"
-
-	nacl.printf = function( msg, ... )
-		printf( "[nacl] " .. msg, ...)
-	end
-
-	nacl.printf( "Premake NaCl Extension (" .. nacl.support_url .. ")" )
-
-	-- Extend the package path to include the directory containing this
-	-- script so we can easily 'require' additional resources from
-	-- subdirectories as necessary
-	local this_dir = debug.getinfo(1, "S").source:match[[^@?(.*[\/])[^\/]-$]];
-	package.path = this_dir .. "actions/?.lua;".. package.path
+	local nacl = premake.modules.nacl
 
 
---
--- Register the Android extension
---
-
-	-- TODO: should PNaCl be system = "pnacl" or system = "nacl" + architecture = "llvm"?
-	premake.NACL = "nacl"
-	premake.PPAPI = "ppapi"
-
-	api.addAllowed("system", { premake.NACL, premake.PPAPI })
-	api.addAllowed("architecture", { "x86", "x86_64", "arm", "llvm" })
-
-
---
--- Register Android properties
---
-
-	api.register {
-		name = "naclsdkroot",
-		scope = "config",
-		kind = "path",
-		tokens = true,
-	}
-
-	-- select glibc or newlib toolchain: <ToolchainName>glibc</ToolchainName>
---	api.register {
---		name = "toolchain",
---		scope = "config",
---		kind = "string",
---		tokens = true,
---	}
-
-	api.register {
-		name = "manifestpath",
-		scope = "config",
-		kind = "path",
-		tokens = true,
-	}
-
-	api.register {
-		name = "indexhtml",
-		scope = "config",
-		kind = "string",
-		tokens = true,
-	}
-
-	api.register {
-		name = "webserverport",
-		scope = "config",
-		kind = "integer",
-	}
-
-	api.register {
-		name = "translatenexe",
-		scope = "config",
-		kind  = "list:string",
-		allowed = {
-			"all",
-			"none",
-			"x86",
-			"x86_64",
-			"arm"
-		},
-		aliases = {
-			x64 = { "x86_64" }
-		}
-	}
-
+	include("_preload.lua")
 
 --
 -- Set global environment for some common NaCl platforms.
 --
 
-configuration { "NaCl32" }
-	system "nacl"
-	architecture "x86"
-	targetsuffix "32"
+	configuration { "NaCl32" }
+		system "nacl"
+		architecture "x86"
+		targetsuffix "32"
 
-configuration { "NaCl64" }
-	system "nacl"
-	architecture "x86_64"
-	targetsuffix "64"
+	configuration { "NaCl64" }
+		system "nacl"
+		architecture "x86_64"
+		targetsuffix "64"
 
---	debugremotehost "localhost"
---	debugport (4014)
---	debugsearchpaths {
---		'C:\udClean\udWebView',
---		'C:\udClean\udWebView\src'
---	}
---	debugstartupcommands {
---		'file C:\ud2Clean\udWebView\www\udWebView64.nexe',
---		'set substitute-path /cygdrive/s/src/out/pepper_39/src C:\nacl_sdk\pepper_39\src'
---	}
---	debugconnectcommands {
---		'nacl-manifest C:\ud2Clean\udWebView\www\udWebView.nmf',
---		'remote get irt "C:/Program Files (x86)/Google/Chrome/Application/39.0.2171.95/nacl_irt_x86_64.nexe"',
---		'nacl-irt "C:/Program Files (x86)/Google/Chrome/Application/39.0.2171.95/nacl_irt_x86_64.nexe"'
---	}
+--		debugremotehost "localhost"
+--		debugport (4014)
+--		debugsearchpaths {
+--			'C:\path\to\symbols',
+--		}
 
-configuration { "NaClARM" }
-	system "nacl"
-	architecture "arm"
-	targetsuffix "ARM"
+--		debugstartupcommands {
+--			'file C:\ud2Clean\udWebView\www\udWebView64.nexe',
+--			'set substitute-path /cygdrive/s/src/out/pepper_39/src C:\nacl_sdk\pepper_39\src'
+--		}
 
-configuration { "PNaCl" }
-	system "nacl"
-	architecture "llvm"
+		-- it would be great to set these, but the chrome version pollutes the path! >_<
+--		debugconnectcommands {
+--			'nacl-manifest C:\ud2Clean\udWebView\www\udWebView.nmf',
+--			'remote get irt "C:/Program Files (x86)/Google/Chrome/Application/39.0.2171.95/nacl_irt_x86_64.nexe"',
+--			'nacl-irt "C:/Program Files (x86)/Google/Chrome/Application/39.0.2171.95/nacl_irt_x86_64.nexe"'
+--		}
 
-configuration { "PPAPI" }
-	system "ppapi"
+	configuration { "NaClARM" }
+		system "nacl"
+		architecture "arm"
+		targetsuffix "ARM"
 
-configuration { "NaCl32 or NaCl64 or NaClARM", "ConsoleApp or WindowedApp" }
-	targetextension ".nexe"
+	configuration { "PNaCl" }
+		system "nacl"
+		architecture "llvm"
 
-configuration { "PNaCl", "ConsoleApp or WindowedApp" }
-	targetextension ".pexe"
+	configuration { "PPAPI" }
+		system "ppapi"
+
+	configuration { "NaCl32 or NaCl64 or NaClARM", "ConsoleApp or WindowedApp" }
+		targetextension ".nexe"
+
+	configuration { "PNaCl", "ConsoleApp or WindowedApp" }
+		targetextension ".pexe"
 
 
---
--- 'require' the vs_addin code.
---
+	include("nacl_vstudio.lua")
 
-	require( "vstudio" )
-	nacl.printf( "Loaded NaCl vs_addin support 'vstudio.lua'", v )
+	return nacl

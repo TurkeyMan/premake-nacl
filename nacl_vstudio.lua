@@ -1,11 +1,11 @@
 --
--- vstudio.lua
+-- nacl/nacl_vstudio.lua
 -- NaCl integration for vstudio.
 -- Copyright (c) 2012 Manu Evans and the Premake project
 --
 
 	local p = premake
-	local nacl = p.extensions.nacl
+	local nacl = p.modules.nacl
 	local sln2005 = p.vstudio.sln2005
 	local vc2010 = p.vstudio.vc2010
 	local vstudio = p.vstudio
@@ -177,8 +177,7 @@
 	end)
 
 	premake.override(vc2010, "optimization", function(oldfn, cfg, condition)
-		local config = cfg.config or cfg
-		if config.system == premake.NACL then
+		if cfg.system == premake.NACL then
 			local map = { Off="O0", On="O2", Debug="O0", Full="O3", Size="Os", Speed="O3" }
 			local value = map[cfg.optimize]
 			if value or not condition then
@@ -225,7 +224,7 @@
 
 	premake.override(vc2010, "generateDebugInformation", function(oldfn, cfg)
 		-- Note: NaCl specifies the debug info in the clCompile section
-		if not cfg.system == premake.NACL then
+		if cfg.system ~= premake.NACL then
 			oldfn(cfg)
 		end
 	end)
@@ -236,9 +235,8 @@
 --
 
 	premake.override(vc2010, "additionalCompileOptions", function(oldfn, cfg, condition)
-		local config = cfg.config or cfg
-		if config.system == premake.NACL then
-			nacl.additionalOptions(cfg)
+		if cfg.system == premake.NACL then
+			nacl.additionalOptions(cfg, condition)
 		end
 		return oldfn(cfg, condition)
 	end)
@@ -247,7 +245,7 @@
 --
 -- Add options unsupported by NaCl vs_addin UI to <AdvancedOptions>.
 --
-	function nacl.additionalOptions(cfg)
+	function nacl.additionalOptions(cfg, condition)
 
 		local function alreadyHas(t, key)
 			for _, k in ipairs(t) do
