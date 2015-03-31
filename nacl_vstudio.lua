@@ -61,9 +61,9 @@
 		local elements = oldfn(cfg)
 		if cfg.kind ~= p.UTILITY then
 			elements = table.join(elements, {
-			  nacl.naclIndexHtml,
-			  nacl.naclToolchainName,
-			  nacl.naclSdkRoot
+				nacl.naclIndexHtml,
+				nacl.naclToolchainName,
+				nacl.naclSdkRoot
 			})
 		end
 		return elements
@@ -101,8 +101,8 @@
 		local elements = oldfn(cfg)
 		if cfg.kind ~= p.UTILITY then
 			elements = table.join(elements, {
-			  nacl.naclWebServerPort,
-			  nacl.naclManifestPath
+				nacl.naclWebServerPort,
+				nacl.naclManifestPath
 			})
 		end
 		return elements
@@ -142,12 +142,12 @@
 
 	premake.override(vc2010.elements, "clCompile", function(oldfn, cfg)
 		return table.join(oldfn(cfg), {
-		  nacl.naclDebugInformation,
---		  nacl.positionIndependentCode
+			nacl.debugInformation,
+--			nacl.positionIndependentCode,
 		})
 	end)
 
-	function nacl.naclDebugInformation(cfg)
+	function nacl.debugInformation(cfg)
 		if cfg.system == premake.NACL then
 			if cfg.flags.Symbols then
 				_p(3,'<GenerateDebugInformation>true</GenerateDebugInformation>')
@@ -168,7 +168,7 @@
 
 	premake.override(vc2010, "treatWarningAsError", function(oldfn, cfg)
 		if cfg.system == premake.NACL then
-			if cfg.flags.FatalWarnings and cfg.warnings ~= "Off" then
+			if cfg.flags.FatalCompileWarnings and cfg.warnings ~= "Off" then
 				_p(3,'<WarningsAsErrors>true</WarningsAsErrors>')
 			end
 		else
@@ -207,7 +207,7 @@
 		local elements = oldfn(cfg)
 		if cfg.kind ~= p.STATICLIB then
 			elements = table.join(elements, {
-			  nacl.translateNexe
+				nacl.translateNexe,
 			})
 		end
 		return elements
