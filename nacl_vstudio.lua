@@ -4,8 +4,13 @@
 -- Copyright (c) 2012 Manu Evans and the Premake project
 --
 
+
 	local p = premake
 	local nacl = p.modules.nacl
+
+	nacl.vs = {}
+
+	local naclvs = nacl.vs
 	local sln2005 = p.vstudio.sln2005
 	local vc2010 = p.vstudio.vc2010
 	local vstudio = p.vstudio
@@ -20,10 +25,6 @@
 	if vstudio.vs200x_architectures ~= nil then
 		vstudio.vs200x_architectures.x86 = "x86"
 		vstudio.vs200x_architectures.x86_64 = "x64"
-	end
-
-	function nacl.isnacl(cfg)
-		return cfg.system == premake.NACL or cfg.system == premake.PPAPI
 	end
 
 	premake.override(vstudio, "archFromConfig", function(oldfn, cfg, win32)
@@ -61,15 +62,15 @@
 		local elements = oldfn(cfg)
 		if cfg.kind ~= p.UTILITY then
 			elements = table.join(elements, {
-				nacl.naclIndexHtml,
-				nacl.naclToolchainName,
-				nacl.naclSdkRoot
+				naclvs.naclIndexHtml,
+				naclvs.naclToolchainName,
+				naclvs.naclSdkRoot
 			})
 		end
 		return elements
 	end)
 
-	function nacl.naclIndexHtml(cfg)
+	function naclvs.naclIndexHtml(cfg)
 		if cfg.system == premake.NACL or cfg.system == premake.PPAPI then
 			if cfg.indexhtml ~= nil then
 				_p(2,'<NaClIndexHTML>%s</NaClIndexHTML>', cfg.indexhtml)
@@ -77,14 +78,14 @@
 		end
 	end
 
-	function nacl.naclToolchainName(cfg)
+	function naclvs.naclToolchainName(cfg)
 		if cfg.system == premake.NACL and cfg.architecture ~= "llvm" then
 			-- TODO: do something about this?
 --			_p(2,'<ToolchainName>glibc</ToolchainName>')
 		end
 	end
 
-	function nacl.naclSdkRoot(cfg)
+	function naclvs.naclSdkRoot(cfg)
 		if cfg.system == premake.NACL or cfg.system == premake.PPAPI then
 			if cfg.naclsdkroot ~= nil then
 				_p(2,'<VSNaClSDKRoot>%s</VSNaClSDKRoot>', cfg.naclsdkroot)
@@ -101,14 +102,14 @@
 		local elements = oldfn(cfg)
 		if cfg.kind ~= p.UTILITY then
 			elements = table.join(elements, {
-				nacl.naclWebServerPort,
-				nacl.naclManifestPath
+				naclvs.naclWebServerPort,
+				naclvs.naclManifestPath
 			})
 		end
 		return elements
 	end)
 
-	function nacl.naclWebServerPort(cfg)
+	function naclvs.naclWebServerPort(cfg)
 		if cfg.system == premake.NACL or cfg.system == premake.PPAPI then
 			if cfg.webserverport ~= nil then
 				_p(2,'<NaClWebServerPort>%d</NaClWebServerPort>', cfg.webserverport)
@@ -116,7 +117,7 @@
 		end
 	end
 
-	function nacl.naclManifestPath(cfg)
+	function naclvs.naclManifestPath(cfg)
 		if cfg.system == premake.NACL then
 			if cfg.manifestpath ~= nil then
 				_p(2,'<NaClManifestPath>%s</NaClManifestPath>', cfg.manifestpath)
@@ -142,12 +143,12 @@
 
 	premake.override(vc2010.elements, "clCompile", function(oldfn, cfg)
 		return table.join(oldfn(cfg), {
-			nacl.debugInformation,
---			nacl.positionIndependentCode,
+			naclvs.debugInformation,
+--			naclvs.positionIndependentCode,
 		})
 	end)
 
-	function nacl.debugInformation(cfg)
+	function naclvs.debugInformation(cfg)
 		if cfg.system == premake.NACL then
 			if cfg.flags.Symbols then
 				_p(3,'<GenerateDebugInformation>true</GenerateDebugInformation>')
@@ -204,16 +205,16 @@
 --
 
 	premake.override(vc2010.elements, "link", function(oldfn, cfg, explicit)
-		local elements = oldfn(cfg)
+		local elements = oldfn(cfg, explicit)
 		if cfg.kind ~= p.STATICLIB then
 			elements = table.join(elements, {
-				nacl.translateNexe,
+				naclvs.translateNexe,
 			})
 		end
 		return elements
 	end)
 
-	function nacl.translateNexe(cfg)
+	function naclvs.translateNexe(cfg)
 		-- Note: Only relevant to PNaCl
 		if cfg.system == premake.NACL and cfg.architecture == "llvm" then
 			_x(3, '<TranslateX86>%s</TranslateX86>', iif(cfg.translatenexe.all or cfg.translatenexe.x86, 'true', 'false'))
@@ -230,13 +231,61 @@
 	end)
 
 
+	function naclvs.getlinks(cfg, systemonly)
+		local result = {}
+
+		if not systemonly then
+			if cfg.flags.RelativeLinks then
+				local libFiles = premake.config.getlinks(cfg, "siblings", "basename")
+				for _, link in ipairs(libFiles) do
+					if string.find(link, "lib") == 1 then
+						link = link:sub(4)
+					end
+					table.insert(result, link)
+				end
+			else
+				-- NaCl TODO: verify that this is okay for NaCl sibling links
+
+				-- Don't use the -l form for sibling libraries, since they may have
+				-- custom prefixes or extensions that will confuse the linker. Instead
+				-- just list out the full relative path to the library.
+				result = config.getlinks(cfg, "siblings", "fullpath")
+			end
+		end
+
+		local links = config.getlinks(cfg, "system", "fullpath")
+		for _, link in ipairs(links) do
+			if path.isframework(link) then
+				table.insert(result, "-framework " .. path.getbasename(link))
+			elseif path.isobjectfile(link) then
+				table.insert(result, link)
+			else
+				table.insert(result, path.getname(link))
+			end
+		end
+
+		return result
+	end
+
+	premake.override(vc2010, "additionalDependencies", function(oldfn, cfg, explicit)
+		if cfg.system == premake.NACL then
+			local links = naclvs.getlinks(cfg, not explicit)
+			if #links > 0 then
+				links = path.translate(table.concat(links, ";"))
+				p.x('<AdditionalDependencies>%s;%%(AdditionalDependencies)</AdditionalDependencies>', links)
+			end
+		else
+			return oldfn(cfg, explicit)
+		end
+	end)
+
 --
 -- Add NaCl tools to vstudio actions.
 --
 
 	premake.override(vc2010, "additionalCompileOptions", function(oldfn, cfg, condition)
 		if cfg.system == premake.NACL then
-			nacl.additionalOptions(cfg, condition)
+			naclvs.additionalOptions(cfg, condition)
 		end
 		return oldfn(cfg, condition)
 	end)
@@ -245,7 +294,7 @@
 --
 -- Add options unsupported by NaCl vs_addin UI to <AdvancedOptions>.
 --
-	function nacl.additionalOptions(cfg, condition)
+	function naclvs.additionalOptions(cfg, condition)
 
 		local function alreadyHas(t, key)
 			for _, k in ipairs(t) do

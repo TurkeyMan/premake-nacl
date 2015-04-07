@@ -60,6 +60,11 @@
 		targetextension ".pexe"
 
 
+	function nacl.isnacl(cfg)
+		return cfg.system == premake.NACL or cfg.system == premake.PPAPI
+	end
+
+
 	include("nacl_vstudio.lua")
 
 	return nacl
