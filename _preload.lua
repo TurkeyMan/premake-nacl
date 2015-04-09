@@ -74,3 +74,22 @@
 			x64 = { "x86_64" }
 		}
 	}
+
+	api.register {
+		name = "debugger",
+		scope = "config",
+		kind = "string",
+		allowed = {
+			"VisualStudio",
+			"GDB",
+			"LLDB",
+			"VisualGDB",
+		}
+	}
+
+	api.register {
+		name = "debugpathmap",
+		scope = "config",
+		kind = "list:keyed:path",
+		tokens = true,
+	}

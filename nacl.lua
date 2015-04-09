@@ -23,24 +23,6 @@
 		architecture "x86_64"
 		targetsuffix "64"
 
---		debugremotehost "localhost"
---		debugport (4014)
---		debugsearchpaths {
---			'C:\path\to\symbols',
---		}
-
---		debugstartupcommands {
---			'file C:\ud2Clean\udWebView\www\udWebView64.nexe',
---			'set substitute-path /cygdrive/s/src/out/pepper_39/src C:\nacl_sdk\pepper_39\src'
---		}
-
-		-- it would be great to set these, but the chrome version pollutes the path! >_<
---		debugconnectcommands {
---			'nacl-manifest C:\ud2Clean\udWebView\www\udWebView.nmf',
---			'remote get irt "C:/Program Files (x86)/Google/Chrome/Application/39.0.2171.95/nacl_irt_x86_64.nexe"',
---			'nacl-irt "C:/Program Files (x86)/Google/Chrome/Application/39.0.2171.95/nacl_irt_x86_64.nexe"'
---		}
-
 	configuration { "NaClARM" }
 		system "nacl"
 		architecture "arm"
@@ -56,8 +38,51 @@
 	configuration { "NaCl32 or NaCl64 or NaClARM", "ConsoleApp or WindowedApp" }
 		targetextension ".nexe"
 
+		debugstartupcommands {
+			'file ${cfg.targetdir}/%{cfg.targetprefix}%{prj.name}%{cfg.targetsuffix}%{cfg.targetextension}',
+		}
+		debugconnectcommands {
+			'nacl-manifest %{cfg.manifestpath or (cfg.targetdir .. "/" .. prj.name .. ".nmf")}',
+		}
+
 	configuration { "PNaCl", "ConsoleApp or WindowedApp" }
 		targetextension ".pexe"
+
+		local nexe_loc = "%{cfg.debugdir or prj.location}/%{cfg.targetprefix}%{prj.name}%{cfg.targetsuffix}-%{cfg.buildcfg}_remote.nexe"
+		debugconnectcommands {
+			'remote get nexe ' .. nexe_loc,
+			'file ' .. nexe_loc,
+		}
+
+	configuration { "PNaCl or NaCl32 or NaCl64 or NaClARM", "ConsoleApp or WindowedApp" }
+		debugremotehost "localhost"
+		debugport(4014)
+
+		local irt_loc = "%{cfg.debugdir or prj.location}/nacl_irt.nexe"
+		debugconnectcommands {
+			'remote get irt ' .. irt_loc,
+			'nacl-irt ' .. irt_loc,
+		}
+
+		-- we can configure the default nacl path mapping if NACL_SDK_ROOT is set
+		local sdk_root = os.getenv("NACL_SDK_ROOT")
+		if sdk_root ~= nil then
+			local pepper = sdk_root:lower()
+			local offset = string.find(pepper, "pepper")
+			if offset ~= nil then
+				pepper = pepper:sub(offset)
+				local src = "/cygdrive/s/src/out/"..pepper.."/src"
+				local target = sdk_root.."/src"
+				debugpathmap { [src] = target }
+			end
+		end
+
+		-- TODO: do we need to define search paths? (gdb needs paths to find source files)
+--		debugsearchpaths {
+--			'C:\path\to\symbols',
+--		}
+
+	configuration {}
 
 
 	function nacl.isnacl(cfg)
@@ -66,5 +91,6 @@
 
 
 	include("nacl_vstudio.lua")
+	include("visualgdb.lua")
 
 	return nacl

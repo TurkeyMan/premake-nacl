@@ -64,7 +64,7 @@
 			elements = table.join(elements, {
 				naclvs.naclIndexHtml,
 				naclvs.naclToolchainName,
-				naclvs.naclSdkRoot
+				naclvs.naclSdkRoot,
 			})
 		end
 		return elements
@@ -103,7 +103,8 @@
 		if cfg.kind ~= p.UTILITY then
 			elements = table.join(elements, {
 				naclvs.naclWebServerPort,
-				naclvs.naclManifestPath
+				naclvs.naclManifestPath,
+				naclvs.naclAddinVersion,
 			})
 		end
 		return elements
@@ -122,6 +123,12 @@
 			if cfg.manifestpath ~= nil then
 				_p(2,'<NaClManifestPath>%s</NaClManifestPath>', cfg.manifestpath)
 			end
+		end
+	end
+
+	function naclvs.naclAddinVersion(cfg)
+		if cfg.system == premake.NACL then
+			_p(2,'<NaClAddInVersion>1</NaClAddInVersion>')
 		end
 	end
 
