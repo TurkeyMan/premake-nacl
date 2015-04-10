@@ -48,17 +48,21 @@
 	configuration { "PNaCl", "ConsoleApp or WindowedApp" }
 		targetextension ".pexe"
 
-		local nexe_loc = "%{cfg.debugdir or prj.location}/%{cfg.targetprefix}%{prj.name}%{cfg.targetsuffix}-%{cfg.buildcfg}_remote.nexe"
+		local nexe_loc = "%{cfg.targetprefix}%{prj.name}%{cfg.targetsuffix}-%{cfg.buildcfg}_remote.nexe"
 		debugconnectcommands {
 			'remote get nexe ' .. nexe_loc,
 			'file ' .. nexe_loc,
 		}
 
 	configuration { "PNaCl or NaCl32 or NaCl64 or NaClARM", "ConsoleApp or WindowedApp" }
+
+		-- TODO: **HAX** we need to find a reasonable way to get to a valid gdb exe; pnacl doesn't have one to use in it's folder
+		debugtoolcommand "$(NACL_SDK_ROOT)/toolchain/win_x86_newlib/bin/x86_64-nacl-gdb.exe"
+
 		debugremotehost "localhost"
 		debugport(4014)
 
-		local irt_loc = "%{cfg.debugdir or prj.location}/nacl_irt.nexe"
+		local irt_loc = "nacl_irt.nexe"
 		debugconnectcommands {
 			'remote get irt ' .. irt_loc,
 			'nacl-irt ' .. irt_loc,
@@ -90,7 +94,9 @@
 	end
 
 
+	-- TODO: extend 'clean' rules for remote .nexe and nacl_irt.nexe
+
+
 	include("nacl_vstudio.lua")
-	include("visualgdb.lua")
 
 	return nacl
