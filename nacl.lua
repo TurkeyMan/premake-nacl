@@ -13,27 +13,29 @@
 -- Set global environment for some common NaCl platforms.
 --
 
-	configuration { "NaCl32" }
+	configuration { "NaCl32 or NaCl64 or NaClARM" }
 		system "nacl"
+		toolset "gcc"
+
+	configuration { "PNaCl" }
+		system "nacl"
+		architecture "pnacl"
+		toolset "clang"
+
+	configuration { "PPAPI" }
+		system "ppapi"
+
+	configuration { "NaCl32" }
 		architecture "x86"
 		targetsuffix "32"
 
 	configuration { "NaCl64" }
-		system "nacl"
 		architecture "x86_64"
 		targetsuffix "64"
 
 	configuration { "NaClARM" }
-		system "nacl"
 		architecture "arm"
 		targetsuffix "ARM"
-
-	configuration { "PNaCl" }
-		system "nacl"
-		architecture "llvm"
-
-	configuration { "PPAPI" }
-		system "ppapi"
 
 	configuration { "NaCl32 or NaCl64 or NaClARM", "ConsoleApp or WindowedApp" }
 		targetextension ".nexe"

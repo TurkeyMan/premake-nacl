@@ -12,12 +12,11 @@
 -- Register the NaCl extension
 --
 
-	-- TODO: should PNaCl be system = "pnacl" or system = "nacl" + architecture = "llvm"?
 	p.NACL = "nacl"
 	p.PPAPI = "ppapi"
 
 	api.addAllowed("system", { p.NACL, p.PPAPI })
-	api.addAllowed("architecture", { "x86", "x86_64", "arm", "llvm" })
+	api.addAllowed("architecture", { "pnacl" })
 
 
 --
@@ -64,13 +63,10 @@
 		scope = "config",
 		kind  = "list:string",
 		allowed = {
-			"all",
 			"none",
+			"all",
 			"x86",
 			"x86_64",
 			"arm"
 		},
-		aliases = {
-			x64 = { "x86_64" }
-		}
 	}

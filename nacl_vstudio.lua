@@ -31,7 +31,7 @@
 		if cfg.system == premake.PPAPI then
 			return "PPAPI"
 		elseif cfg.system == premake.NACL then
-			local platformMap = { x86 = "NaCl32", x86_64 = "NaCl64", arm = "NaClARM", llvm = "PNaCl" }
+			local platformMap = { x86 = "NaCl32", x86_64 = "NaCl64", arm = "NaClARM", pnacl = "PNaCl" }
 			if cfg.architecture ~= nil then
 				if platformMap[cfg.architecture] then
 					return platformMap[cfg.architecture]
@@ -79,7 +79,7 @@
 	end
 
 	function naclvs.naclToolchainName(cfg)
-		if cfg.system == premake.NACL and cfg.architecture ~= "llvm" then
+		if cfg.system == premake.NACL and cfg.architecture ~= "pnacl" then
 			-- TODO: do something about this?
 --			_p(2,'<ToolchainName>glibc</ToolchainName>')
 		end
@@ -132,17 +132,6 @@
 		end
 	end
 
-	premake.override(vc2010, "targetExt", function(oldfn, cfg)
-		if cfg.system == premake.NACL then
-			local ext = cfg.buildtarget.extension
-			if ext ~= "" then
-				_x(2,'<TargetExt>%s</TargetExt>', ext)
-			end
-		else
-			oldfn(cfg)
-		end
-	end)
-
 
 --
 -- Extend clCompile.
@@ -151,55 +140,28 @@
 	premake.override(vc2010.elements, "clCompile", function(oldfn, cfg)
 		return table.join(oldfn(cfg), {
 			naclvs.debugInformation,
---			naclvs.positionIndependentCode,
+			naclvs.pic,
 		})
 	end)
 
 	function naclvs.debugInformation(cfg)
 		if cfg.system == premake.NACL then
 			if cfg.flags.Symbols then
-				_p(3,'<GenerateDebugInformation>true</GenerateDebugInformation>')
+				_p(3,'<GenerateDebuggingInformation>true</GenerateDebuggingInformation>')
 			end
 		end
 	end
 
-	premake.override(vc2010, "warningLevel", function(oldfn, cfg)
-		if cfg.system == premake.NACL then
-			local map = { Off = "DisableAllWarnings", Extra = "AllWarnings" }
-			if map[cfg.warnings] ~= nil then
-				_p(3,'<Warnings>%s</Warnings>', map[cfg.warnings])
-			end
-		else
-			oldfn(cfg)
+	function naclvs.pic(cfg)
+		if cfg.pic ~= nil then
+			_p(3,'<PositionIndependentCode>%s</PositionIndependentCode>', iif(cfg.pic == "On", "true", "false"))
 		end
-	end)
-
-	premake.override(vc2010, "treatWarningAsError", function(oldfn, cfg)
-		if cfg.system == premake.NACL then
-			if cfg.flags.FatalCompileWarnings and cfg.warnings ~= "Off" then
-				_p(3,'<WarningsAsErrors>true</WarningsAsErrors>')
-			end
-		else
-			oldfn(cfg)
-		end
-	end)
-
-	premake.override(vc2010, "optimization", function(oldfn, cfg, condition)
-		if cfg.system == premake.NACL then
-			local map = { Off="O0", On="O2", Debug="O0", Full="O3", Size="Os", Speed="O3" }
-			local value = map[cfg.optimize]
-			if value or not condition then
-				vc2010.element('OptimizationLevel', condition, value or "O0")
-			end
-		else
-			oldfn(cfg, condition)
-		end
-	end)
+	end
 
 	premake.override(vc2010, "exceptionHandling", function(oldfn, cfg)
 		if cfg.system == premake.NACL then
 			if cfg.flags.NoExceptions then
-				_p(3,'<GccExceptionHandling>false</GccExceptionHandling>')
+				_p(3,'<ExceptionHandling>false</ExceptionHandling>')
 			end
 		else
 			oldfn(cfg)
@@ -223,7 +185,7 @@
 
 	function naclvs.translateNexe(cfg)
 		-- Note: Only relevant to PNaCl
-		if cfg.system == premake.NACL and cfg.architecture == "llvm" then
+		if cfg.system == premake.NACL and cfg.architecture == "pnacl" then
 			_x(3, '<TranslateX86>%s</TranslateX86>', iif(cfg.translatenexe.all or cfg.translatenexe.x86, 'true', 'false'))
 			_x(3, '<TranslateX64>%s</TranslateX64>', iif(cfg.translatenexe.all or cfg.translatenexe.x86_64, 'true', 'false'))
 			_x(3, '<TranslateArm>%s</TranslateArm>', iif(cfg.translatenexe.all or cfg.translatenexe.arm, 'true', 'false'))
