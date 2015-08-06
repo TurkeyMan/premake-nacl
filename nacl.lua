@@ -2,28 +2,20 @@
 --
 -- Create a nacl namespace to isolate the additions
 --
-	premake.modules.nacl = {}
 
-	local nacl = premake.modules.nacl
+	local p = premake
+
+	p.modules.nacl = {}
+
+	local m = p.modules.nacl
+	m._VERSION = "0.0.1"
 
 
-	include("_preload.lua")
+	require "vstool"
 
 --
 -- Set global environment for some common NaCl platforms.
 --
-
-	configuration { "NaCl32 or NaCl64 or NaClARM" }
-		system "nacl"
-		toolset "gcc"
-
-	configuration { "PNaCl" }
-		system "nacl"
-		architecture "pnacl"
-		toolset "clang"
-
-	configuration { "PPAPI" }
-		system "ppapi"
 
 	configuration { "NaCl32" }
 		architecture "x86"
@@ -91,9 +83,13 @@
 	configuration {}
 
 
-	function nacl.isnacl(cfg)
+	function m.isnacl(cfg)
 		return cfg.system == premake.NACL or cfg.system == premake.PPAPI
 	end
+
+	premake.override(premake.modules.vstool, "isvstool", function(oldfn, cfg)
+		return not m.isnacl(cfg) and oldfn(cfg)
+	end)
 
 
 	-- TODO: extend 'clean' rules for remote .nexe and nacl_irt.nexe
@@ -101,4 +97,4 @@
 
 	include("nacl_vstudio.lua")
 
-	return nacl
+	return m

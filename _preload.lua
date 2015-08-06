@@ -70,3 +70,29 @@
 			"arm"
 		},
 	}
+
+
+--
+-- Set global environment for the default NaCl platforms.
+--
+
+	configuration { "NaCl32 or NaCl64 or NaClARM" }
+		system "nacl"
+		toolset "gcc"
+
+	configuration { "PNaCl" }
+		system "nacl"
+		architecture "pnacl"
+		toolset "clang"
+
+	configuration { "PPAPI" }
+		system "ppapi"
+
+
+--
+-- Decide when the full module should be loaded.
+--
+
+	return function(cfg)
+		return cfg.system == "nacl" or cfg.system == "ppapi"
+	end
